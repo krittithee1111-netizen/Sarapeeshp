@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Affiliate Shop Template (Demo)</title>
+<style>
+  /* ---------- Reset & base ---------- */
+  :root{
+    --bg:#0f1720; --card:#0b1220; --muted:#98a2b3; --accent:#06b6d4;
+    --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:Inter, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    background: linear-gradient(180deg,#071126 0%, #061021 60%);
+    color:#e6eef6; -webkit-font-smoothing:antialiased;
+    padding:20px;
+    line-height:1.4;
+  }
+  .container{max-width:1100px;margin:0 auto}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+
+  /* ---------- Top controls ---------- */
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .search{
+    display:flex;gap:8px;background:var(--glass);padding:8px;border-radius:10px;
+    align-items:center;flex:1;min-width:220px;
+  }
+  .search input{background:transparent;border:0;outline:none;color:inherit;font-size:15px;width:100%}
+  .btn{
+    background:linear-gradient(90deg,var(--accent),#3b82f6);border:0;padding:8px 12px;border-radius:10px;color:#042a2f;
+    cursor:pointer;font-weight:600;
+  }
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:500;}
+  .select, .input-number{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:10px;color:inherit}
+
+  /* ---------- grid ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.03);
+    display:flex;flex-direction:column;gap:8px;height:100%;
+  }
+  .thumb{height:160px;border-radius:10px;overflow:hidden;background:#071018;display:flex;align-items:center;justify-content:center}
+  .thumb img{max-width:100%;max-height:100%;object-fit:contain}
+  .title{font-weight:700;font-size:15px}
+  .price{font-weight:800;color:#34d399}
+  .meta{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+  .stock.low{color:#f97316}
+  .stock.out{color:#ef4444;font-weight:700}
+  .actions{display:flex;gap:8px;margin-top:auto}
+  .actions a.btn{flex:1;text-align:center;text-decoration:none;color:inherit;display:inline-block}
+
+  /* ---------- modal / form ---------- */
+  .modal{
+    position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:80;
+  }
+  .modal.open{display:flex}
+  .sheet{background:linear-gradient(180deg,#071621,#04121a);padding:18px;border-radius:12px;width:min(780px,96%);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+  .form-row{display:flex;gap:8px;margin-bottom:10px}
+  .form-row > *{flex:1}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  input[type="text"], input[type="number"], textarea{
+    width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);
+    background:transparent;color:inherit;
+  }
+
+  /* small */
+  .top-stats{display:flex;gap:12px;color:var(--muted);font-size:13px}
+  .tag{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px}
+  footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:600px){
+    .thumb{height:140px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>Affiliate Shop — Template (Demo)</h1>
+      <div class="sub">เว็บรวมสินค้าพร้อมระบบสต็อกและลิงก์ affiliate — ทำงานแบบ static (localStorage)</div>
+    </div>
+    <div style="margin-left:auto" class="top-stats">
+      <div class="tag" id="totalProducts">Products: 0</div>
+      <div class="tag" id="inStockCount">In stock: 0</div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="opacity:.7"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <input id="searchInput" placeholder="ค้นหาสินค้า (ชื่อ, คำอธิบาย)..." />
+    </div>
+
+    <select id="filterStock" class="select">
+      <option value="all">ทั้งหมด</option>
+      <option value="instock">มีสต็อกเท่านั้น</option>
+      <option value="out">สินค้าไม่มีสต็อก</option>
+    </select>
+
+    <select id="sortBy" class="select">
+      <option value="default">เรียงตามค่าเริ่มต้น</option>
+      <option value="price-asc">ราคา: น้อย → มาก</option>
+      <option value="price-desc">ราคา: มาก → น้อย</option>
+    </select>
+
+    <button class="btn" id="addProductBtn">+ เพิ่มสินค้า</button>
+    <button class="btn ghost" id="resetDemo">รีเซ็ตตัวอย่าง</button>
+  </div>
+
+  <div id="productGrid" class="grid" aria-live="polite"></div>
+
+  <footer>
+    ทดลองใช้งาน: คลิกปุ่ม "Buy" จะเปิดลิงก์ affiliate ในแท็บใหม่ (และลดสต็อกลงเพื่อจำลองการขาย) — ระบบนี้เก็บข้อมูลบนเบราว์เซอร์เท่านั้น
+  </footer>
+</div>
+
+<!-- Modal: Add / Edit Product -->
+<div id="modal" class="modal" role="dialog" aria-hidden="true">
+  <div class="sheet">
+    <h3 id="modalTitle">เพิ่มสินค้าใหม่</h3>
+    <div style="margin-top:8px">
+      <div class="form-row">
+        <div>
+          <label>ชื่อสินค้า</label>
+          <input id="p_name" type="text" placeholder="เช่น หมวกสายสตรีท" />
+        </div>
+        <div>
+          <label>ราคา (บาท)</label>
+          <input id="p_price" type="number" min="0" step="1" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label>ลิงก์ Affiliate (URL)</label>
+          <input id="p_aff" type="text" placeholder="https://shopee... หรือ https://collshp..." />
+        </div>
+        <div>
+          <label>สต็อก (จำนวน)</label>
+          <input id="p_stock" class="input-number" type="number" min="0" step="1" />
+        </div>
+      </div>
+
+      <label>คำอธิบาย (สั้น)</label>
+      <textarea id="p_desc" rows="3"></textarea>
+
+      <label>URL รูปภาพ (optional)</label>
+      <input id="p_img" type="text" placeholder="https://..." />
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn ghost" id="closeModal">ยกเลิก</button>
+        <button class="btn" id="saveProduct">บันทึกสินค้า</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== Demo template JS ===========
+ - เก็บข้อมูลสินค้าใน localStorage (key: aff_products)
+ - ตัวอย่างสินค้าถูกเติมเมื่อไม่มีข้อมูล
+ - ค้นหา / กรอง / เรียง / แก้ไข / ลบ
+ - คลิก Buy จะเปิด affiliate link ในแท็บใหม่ และลดสต็อกลง (จำลองการขาย)
+======================================== */
+
+const STORAGE_KEY = 'aff_products_v1';
+
+// sample products (you can replace these with real affiliate links)
+const sampleProducts = [
+  {id:genId(), name:'เสื้อยืดคอปกสไตล์สตรีท', price:299, stock:12,
+   desc:'ผ้าคอตตอน นุ่ม ใส่สบาย เหมาะกับทุกวัน', img:'https://images.unsplash.com/photo-1520975913128-7b5f8e6d7f0f?w=800&q=60',
+   affiliate:'https://example.com/aff1'},
+  {id:genId(), name:'หูฟังไร้สายคุณภาพดี', price:1290, stock:6,
+   desc:'เสียงเบสแน่น แบตอึด เชื่อมต่อไว', img:'https://images.unsplash.com/photo-1518444025628-9f6c0a4f5f9d?w=800&q=60',
+   affiliate:'https://example.com/aff2'},
+  {id:genId(), name:'แก้วเก็บความร้อน-เย็น', price:390, stock:0,
+   desc:'เก็บอุณหภูมิได้นาน ฝาปิดแน่น', img:'https://images.unsplash.com/photo-1505577058444-a3dab1b10616?w=800&q=60',
+   affiliate:'https://example.com/aff3'},
+];
+
+function genId(){ return 'p_'+Math.random().toString(36).slice(2,9) }
+
+function saveProducts(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)) }
+function loadProducts(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return null;
+  try{ return JSON.parse(raw) }catch(e){ return null; }
+}
+
+function resetDemo(){
+  const copy = sampleProducts.map(p=>({...p, id:genId()}));
+  saveProducts(copy);
+  render();
+}
+
+/* ---------- UI state ---------- */
+let products = loadProducts();
+if(!products || !products.length) {
+  // fill with sample on first run
+  products = sampleProducts.map(p=>({...p, id:genId()}));
+  saveProducts(products);
+}
+
+const el = {
+  grid: document.getElementById('productGrid'),
+  search: document.getElementById('searchInput'),
+  filterStock: document.getElementById('filterStock'),
+  sortBy: document.getElementById('sortBy'),
+  addBtn: document.getElementById('addProductBtn'),
+  modal: document.getElementById('modal'),
+  modalTitle: document.getElementById('modalTitle'),
+  p_name: document.getElementById('p_name'),
+  p_price: document.getElementById('p_price'),
+  p_aff: document.getElementById('p_aff'),
+  p_stock: document.getElementById('p_stock'),
+  p_desc: document.getElementById('p_desc'),
+  p_img: document.getElementById('p_img'),
+  saveProduct: document.getElementById('saveProduct'),
+  closeModal: document.getElementById('closeModal'),
+  resetDemo: document.getElementById('resetDemo'),
+  totalProducts: document.getElementById('totalProducts'),
+  inStockCount: document.getElementById('inStockCount'),
+};
+
+let editingId = null;
+
+/* ---------- render ---------- */
+function render(){
+  products = loadProducts() || [];
+  // stats
+  el.totalProducts.textContent = `Products: ${products.length}`;
+  el.inStockCount.textContent = `In stock: ${products.filter(p=>p.stock>0).length}`;
+
+  // filter & search & sort
+  const q = el.search.value.trim().toLowerCase();
+  let list = products.filter(p=>{
+    if(el.filterStock.value === 'instock' && p.stock <= 0) return false;
+    if(el.filterStock.value === 'out' && p.stock > 0) return false;
+    if(!q) return true;
+    return (p.name + ' ' + (p.desc||'')).toLowerCase().includes(q);
+  });
+
+  if(el.sortBy.value === 'price-asc') list.sort((a,b)=>a.price-b.price);
+  else if(el.sortBy.value === 'price-desc') list.sort((a,b)=>b.price-a.price);
+
+  el.grid.innerHTML = '';
+  if(list.length === 0){
+    el.grid.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);padding:30px;background:transparent;border-radius:10px;text-align:center">ไม่พบสินค้า</div>`;
+    return;
+  }
+
+  list.forEach(p=>{
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <div class="thumb"><img src="${p.img || 'https://via.placeholder.com/400x300?text=No+Image'}" alt="${escapeHtml(p.name)}"></div>
+      <div>
+        <div class="title">${escapeHtml(p.name)}</div>
+        <div class="meta"><div class="price">${formatPrice(p.price)} ฿</div>
+        <div class="meta-right"><span class="stock ${p.stock===0? 'out' : (p.stock<5? 'low': '')}">สต็อก: ${p.stock}</span></div></div>
+        <div style="margin-top:8px;color:var(--muted);font-size:13px">${escapeHtml(p.desc||'')}</div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" href="#" data-action="edit" data-id="${p.id}">แก้ไข</a>
+        <a class="btn" href="${p.affiliate||'#'}" target="_blank" rel="noopener" data-action="buy" data-id="${p.id}">Buy</a>
+      </div>
+    `;
+    // attach listeners
+    el.grid.appendChild(card);
+  });
+
+  // attach click handlers (event delegation)
+  el.grid.querySelectorAll('[data-action="buy"]').forEach(a=>{
+    a.addEventListener('click', function(ev){
+      // open link normally in new tab; but before that, we simulate sale by reducing stock
+      const id = this.dataset.id;
+      // reduce stock only if >0
+      const prod = products.find(x=>x.id===id);
+      if(prod){
+        if(prod.stock > 0){
+          prod.stock = Math.max(0, prod.stock - 1);
+          saveProducts(products);
+          // re-render delayed to not prevent navigation
+          setTimeout(render, 250);
+        } else {
+          // optionally notify out of stock
+          alert('สินค้าหมดสต็อกแล้ว (ระบบจำลอง)');
+          ev.preventDefault();
+          return;
+        }
+      }
+      // allow link open (default behavior)
+    })
+  });
+
+  el.grid.querySelectorAll('[data-action="edit"]').forEach(a=>{
+    a.addEventListener('click', function(ev){
+      ev.preventDefault();
+      const id = this.dataset.id;
+      startEditProduct(id);
+    })
+  });
+}
+
+/* ---------- helpers ---------- */
+function formatPrice(n){ return Number(n).toLocaleString('en-US') }
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+
+/* ---------- modal: add/edit ---------- */
+el.addBtn.addEventListener('click', ()=>openModalForNew());
+el.closeModal.addEventListener('click', closeModal);
+el.saveProduct.addEventListener('click', saveFromModal);
+
+function openModalForNew(){
+  editingId = null;
+  el.modalTitle.textContent = 'เพิ่มสินค้าใหม่';
+  el.p_name.value = el.p_price.value = el.p_aff.value = el.p_stock.value = el.p_desc.value = el.p_img.value = '';
+  el.modal.classList.add('open');
+  el.modal.setAttribute('aria-hidden','false');
+}
+function startEditProduct(id){
+  editingId = id;
+  const p = products.find(x=>x.id===id);
+  if(!p) return alert('ไม่พบสินค้า');
+  el.modalTitle.textContent = 'แก้ไขสินค้า';
+  el.p_name.value = p.name;
+  el.p_price.value = p.price;
+  el.p_aff.value = p.affiliate || '';
+  el.p_stock.value = p.stock;
+  el.p_desc.value = p.desc || '';
+  el.p_img.value = p.img || '';
+  el.modal.classList.add('open');
+  el.modal.setAttribute('aria-hidden','false');
+}
+function closeModal(){
+  el.modal.classList.remove('open');
+  el.modal.setAttribute('aria-hidden','true');
+  editingId = null;
+}
+function saveFromModal(){
+  const name = el.p_name.value.trim();
+  const price = Number(el.p_price.value || 0);
+  const aff = el.p_aff.value.trim();
+  let stock = Number(el.p_stock.value || 0);
+  const desc = el.p_desc.value.trim();
+  const img = el.p_img.value.trim();
+
+  if(!name){ alert('กรุณากรอกชื่อสินค้า'); return; }
+
+  if(editingId){
+    const idx = products.findIndex(p=>p.id===editingId);
+    if(idx>=0){
+      products[idx] = {...products[idx], name, price, affiliate:aff, stock, desc, img};
+    }
+  } else {
+    products.push({id:genId(), name, price, affiliate:aff, stock, desc, img});
+  }
+  saveProducts(products);
+  closeModal();
+  render();
+}
+
+/* ---------- search / filters ---------- */
+el.search.addEventListener('input', debounce(()=>render(), 220));
+el.filterStock.addEventListener('change', ()=>render());
+el.sortBy.addEventListener('change', ()=>render());
+
+/* ---------- reset / init ---------- */
+el.resetDemo.addEventListener('click', ()=>{
+  if(confirm('จะรีเซ็ตข้อมูลเป็นตัวอย่างใหม่ ใช่หรือไม่?')) resetDemo();
+});
+
+render();
+
+/* ---------- util: debounce ---------- */
+function debounce(fn,ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms) } }
+
+</script>
+</body>
+</html>
